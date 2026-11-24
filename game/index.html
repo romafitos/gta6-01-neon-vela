@@ -3,17 +3,53 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
-<style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
-  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-</style>
+<title>Neon Vela</title>
+<link rel="icon" href="data:,">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<link rel="stylesheet" href="./src/ui/style.css">
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
-<p id="status" role="status" aria-live="polite"></p>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="crosshair" class="hidden"></div>
+<div id="hud" class="hidden">
+  <div id="objective" class="panel hidden"><div class="mname"></div><div class="mstep"></div><div class="mprog"></div></div>
+  <div id="topRight">
+    <div id="money">$0</div>
+    <div id="stars"></div>
+    <div id="rank"></div>
+    <div id="respectBar"><i></i></div>
+    <div id="weapon" class="panel"><span class="wname"></span><span class="ammo"></span></div>
+  </div>
+  <div id="radio" class="hidden"></div>
+  <div id="raceHud" class="panel hidden"><div class="pos"></div><div class="info"></div></div>
+  <div id="notice"></div>
+  <div id="garage" class="panel hidden"></div>
+  <div id="bottomLeft">
+    <canvas id="minimap" width="210" height="210"></canvas>
+    <div id="bars"><div class="bar" id="hpBar"><i></i></div><div class="bar" id="armBar"><i></i></div></div>
+    <div id="district" class="panel"><b></b> <span></span><div id="standBar"><i></i></div></div>
+  </div>
+  <div id="speedo" class="hidden"></div>
+  <div id="crewBar" class="panel"></div>
+  <div id="ticker" class="panel hidden"></div>
+</div>
+<div id="wheel" class="hidden"></div>
+<canvas id="bigmap" class="hidden" width="1280" height="800"></canvas>
+<div id="help" class="panel hidden"></div>
+<div id="overlay" class="hidden"><div><div class="big"></div><div class="sub"></div></div></div>
+<div id="pause" class="screen hidden">
+  <h1>PAUSED</h1>
+  <button class="btn" id="btnResume">Resume</button>
+  <button class="btn alt" id="btnHelp">Controls (F1)</button>
+</div>
+<div id="title" class="screen">
+  <h1>NEON VELA</h1>
+  <h2>SUN · NEON · NO MERCY</h2>
+  <button class="btn" id="btnPlay">Play</button>
+  <button class="btn alt hidden" id="btnNew">New Game</button>
+  <div class="hint">Click Play or press Enter · WASD walk &amp; drive · mouse aim · F1 controls</div>
+</div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

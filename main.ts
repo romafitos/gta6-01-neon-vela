@@ -1,12 +1,12 @@
-// A working gta6-01 entry (Node 22, standard library only): the game is this directory's
-// game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
-// modules, no library and no network request), and the program hands it in. It copies game/ and
-// screenshots/ from beside this file to /output and writes /output/dossier.json, the summary the
-// judge reads, with the vendored make.fun library. Only the plumbing, not an open world: Block
-// Dodger, a plain 2D canvas game where a paddle dodges falling blocks and catches coins, with a
-// title screen, score, lives and levels, game over and restart, flat colours and no sound. Build
-// your own open-world crime game in its place (three.js or any library you vendor under game/),
-// put your 3 or 4 PNG or JPEG screenshots in screenshots/ (the first by name is the cover) and run it.
+// Neon Vela — the gta6-01 entry's hand-in program (Node 22, standard library only).
+// The game is this directory's game/ folder: plain static files a desktop browser loads offline
+// (game/index.html, its ES modules under game/src and three.js vendored at
+// game/vendor/three.module.min.js, resolved through an import map; no network request at all).
+// This program copies game/ and screenshots/ from beside this file to /output and writes
+// /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
+// Neon Vela is an open-world neon coastal crime game: walk and drive a sunset city of five
+// districts, carjack traffic, fight with six weapons, outrun a 5-star police dispatch with
+// roadblocks, RAM/PIT cruisers and the Air One helicopter, and play ten story missions.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
@@ -19,6 +19,12 @@ import { buildDossier } from './vendor/makefun-game.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
+// Fail early, with a plain message, if the game folder is incomplete: the judge's browser
+// needs the page, the entry module and the vendored three.js build next to each other.
+for (const need of ['game/index.html', 'game/src/main.js', 'game/vendor/three.module.min.js']) {
+  if (!existsSync(join(here, need))) throw new Error(`Neon Vela: missing ${need}`);
+}
 
 mkdirSync(out, { recursive: true });
 cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
