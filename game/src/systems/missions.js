@@ -45,6 +45,9 @@ function stealCar(place, kind, label) {
     label, kind: 'steal',
     start(m) {
       this.car = m.game.vehicleSys.spawn(kind, place.x, place.z, place.yaw ?? 0, { driver: null, tag: 'mission' });
+      // The parked target is tough until you reach it, so stray fire or traffic
+      // cannot fail the job before it starts.
+      this.car.hp = this.car.maxHp = this.car.maxHp * 3;
       m.own(this.car);
       m.blips.push({ obj: this.car, color: C.goal });
     },

@@ -172,6 +172,32 @@ export function createVehicles(game) {
       }
     } else v.stuckT = 0;
     v.lastX = v.x; v.lastZ = v.z;
+    // Second guard, over a longer window: wheels driven for 1.5 s with under 0.6 m of net travel
+    // (the car jitters in a gap between two colliders) — lift it to the nearest open spot.
+    if (v.driver === 'player' && Math.abs(v.throttle) > 0.1) {
+      if (v.winT === undefined) { v.winT = 0; v.winX = v.x; v.winZ = v.z; }
+      v.winT += dt;
+      if (v.winT > 1.5) {
+        if (Math.hypot(v.x - v.winX, v.z - v.winZ) < 0.6) freeSpot(v);
+        v.winT = 0; v.winX = v.x; v.winZ = v.z;
+      }
+    } else v.winT = undefined;
+  }
+
+  // Search rings around a car for the nearest place it fits, and move it there.
+  function freeSpot(v) {
+    for (let r = 2; r <= 14; r += 2) {
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        const x = v.x + Math.sin(a) * r, z = v.z + Math.cos(a) * r;
+        if (!game.colliders.pointBlocked(x, z, CAR_RADIUS + 0.3)) {
+          v.x = x; v.z = z; v.speed = 0; v.spin = 0;
+          game.emit('carUnstuck', v);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // Car-to-car contact: circles separate, the lighter car takes more of the shove.

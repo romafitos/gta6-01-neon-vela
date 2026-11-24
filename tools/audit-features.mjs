@@ -3,7 +3,7 @@
 // player-facing keys (crew, garage, radio) are pressed through the real keyboard.
 
 export async function runFeatures(t) {
-  const { page, G, wait, tap, reset, record, want } = t;
+  const { page, G, wait, waitSim, tap, reset, record, want } = t;
   const home = await G(() => ({ x: window.__game.player.x, z: window.__game.player.z }));
 
   // Shared in-page helpers.
@@ -92,8 +92,8 @@ export async function runFeatures(t) {
   if (want('police')) {
     await reset(home.x, home.z);
     // Crime raises stars: real click shooting near witnesses.
-    await G(() => { const g = window.__game, p = g.player; g.combat.select(1); g.combat.refill(); for (let i = 0; i < 3; i++) g.humans.spawn('civ', p.x + 4 + i, p.z + 3); });
-    await page.mouse.move(640, 360); await page.mouse.down(); await wait(80); await page.mouse.up(); await wait(500);
+    await G(() => { const g = window.__game, p = g.player; g.combat.select(1); g.combat.refill(); for (let i = 0; i < 3; i++) { const c = g.humans.spawn('civ', p.x + 4 + i, p.z + 3); g.colliders.resolveCircle(c, 0.5); } g.__steps(2); });
+    await page.mouse.move(640, 360); await page.mouse.down(); await waitSim(0.05); await page.mouse.up(); await waitSim(0.6);
     const s1 = await G(() => window.__game.police.stars);
     record('police: firing a gun near witnesses gives a wanted star', s1 >= 1, { stars: s1 });
     const r = await G(() => {
@@ -115,12 +115,14 @@ export async function runFeatures(t) {
       // Searchlight tracks the player: move away 30 m and watch the light point follow.
       const h = g.dispatch.heli;
       if (h) {
-        h.tx = p.x; h.tz = p.z; g.__steps(5);
+        // Keep the suspect free for this check (no arrest, no death) so only the light moves.
+        const hold = (n) => { for (let i = 0; i < n; i += 5) { p.hp = p.maxHp; for (const a of g.actors || []) a.arrestT = 0; g.flags.respawnT = 0; g.__steps(5); } };
+        h.tx = p.x; h.tz = p.z; hold(5);
         p.teleport(p.x + 30, p.z);
         const d0 = Math.hypot(h.tx - p.x, h.tz - p.z);
-        g.__steps(120);
+        hold(120);
         const d1 = Math.hypot(h.tx - p.x, h.tz - p.z);
-        g.__steps(180);
+        hold(180);
         out.light = { before: +d0.toFixed(1), after2s: +d1.toFixed(1), after5s: +Math.hypot(h.tx - p.x, h.tz - p.z).toFixed(1), lit: h.lit, spotIntensity: h.spot.intensity, coneVisible: h.cone.visible };
       }
       out.ticker = g.hud.tickerLog.slice(-4);
@@ -312,7 +314,7 @@ export async function runFeatures(t) {
     const open = await G(() => window.__game.garage.open && !document.getElementById('garage').classList.contains('hidden'));
     const col0 = await G(() => window.__game.__garageCar.color);
     const m0 = await G(() => window.__game.stats.money);
-    await tap('Digit1'); await tap('Digit2'); await tap('Digit3'); await wait(150);
+    await tap('Digit1'); await tap('Digit2'); await tap('Digit3'); await waitSim(0.1);
     const after = await G(() => { const g = window.__game; return { lv: g.garage.levels(), money: g.stats.money, color: g.__garageCar.color, speed: g.garage.speedFactor(), armor: g.garage.armorFactor() }; });
     record('garage: opens when stopped at Chrome & Coral Customs', open, {});
     record('garage: engine + armor upgrades and respray bought with cash', after.lv.engine === 1 && after.lv.armor === 1 && after.color !== col0 && after.money < m0, { ...after, spent: m0 - after.money });

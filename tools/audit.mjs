@@ -38,8 +38,20 @@ page.on('pageerror', (e) => log.console.errors.push('pageerror: ' + e.message));
 const G = (fn, arg) => page.evaluate(fn, arg);
 const wait = (ms) => page.waitForTimeout(ms);
 const want = (n) => !only || only.includes(n);
-async function hold(key, ms) { await page.keyboard.down(key); await wait(ms); await page.keyboard.up(key); }
-async function tap(key) { await page.keyboard.press(key); await wait(120); }
+// Holds and taps are measured in game time, not wall-clock time: on a slow software-GL
+// machine a wall-clock wait can pass with only a frame or two simulated.
+const simTime = () => G(() => (window.__game.paused || !window.__game.started ? null : window.__game.time));
+async function waitSim(sec, capMs = 20000) {
+  const t0 = await simTime(); const w0 = Date.now();
+  if (t0 === null) { await wait(150); return; }
+  for (;;) {
+    const t = await simTime();
+    if (t === null || t - t0 >= sec || Date.now() - w0 > capMs) break;
+    await wait(40);
+  }
+}
+async function hold(key, ms) { await page.keyboard.down(key); await waitSim(ms / 1000); await page.keyboard.up(key); await waitSim(1 / 30); }
+async function tap(key) { await page.keyboard.down(key); await waitSim(1 / 30); await page.keyboard.up(key); await waitSim(1 / 30); }
 const pos = () => G(() => { const p = window.__game.player; return { x: p.x, z: p.z, yaw: p.yaw, cam: p.camYaw, car: !!p.vehicle, hp: p.hp }; });
 
 // Put the player somewhere for a test, on foot, with the police off its back.
@@ -94,7 +106,8 @@ async function controls() {
   record('control: Shift sprint is faster', run > walk * 1.3, { walk: +walk.toFixed(2), sprint: +run.toFixed(2) });
   // Mouse aim turns the camera.
   const c0 = (await pos()).cam;
-  await page.mouse.move(640, 360); await page.mouse.move(760, 360, { steps: 6 }); await wait(150);
+  // The test mode (?audit=1) never takes pointer lock, so cursor moves drive the camera.
+  await page.mouse.move(640, 360); await page.mouse.move(760, 360, { steps: 6 }); await waitSim(0.1);
   const c1 = (await pos()).cam;
   record('control: mouse turns the aim/camera', Math.abs(c1 - c0) > 0.05, { before: +c0.toFixed(3), after: +c1.toFixed(3) });
   // Shoot: pistol uses ammo and emits a shot.
@@ -102,7 +115,7 @@ async function controls() {
   await wait(250);
   const ammo0 = await G(() => window.__game.combat.ammo[1].clip);
   await page.mouse.down(); await wait(80); await page.mouse.up(); await wait(400);
-  const shot = await G(() => ({ clip: window.__game.combat.ammo[1].clip, shots: window.__game.__shots }));
+  const shot = await G(() => { const g = window.__game, p = g.player; return { clip: g.combat.ammo[1].clip, shots: g.__shots, idx: g.combat.state.index, car: !!p.vehicle, alive: p.alive, en: g.input.enabled, wheelOpen: !!g.wheelOpen, cd: +g.combat.state.cd.toFixed(2), reload: +g.combat.state.reloadT.toFixed(2), paused: g.paused }; });
   record('control: left click shoots', shot.shots >= 1 && shot.clip < ammo0, { clipBefore: ammo0, ...shot });
   // Weapon switching: number keys, mouse wheel, Q tap and Q hold wheel.
   const wi = () => G(() => window.__game.combat.state.index);
@@ -119,7 +132,7 @@ async function controls() {
   record('control: Q tap switches to next weapon', afterQ === 3, { index: afterQ });
   await page.keyboard.down('Tab'); await wait(300);
   const wheelOpen = await G(() => ({ open: window.__game.wheel.open, ts: window.__game.timeScale, vis: !document.getElementById('wheel').classList.contains('hidden') }));
-  await page.mouse.move(640, 360); await page.mouse.move(640, 200, { steps: 5 }); await wait(150);
+  await page.mouse.move(640, 360); await page.mouse.move(640, 200, { steps: 5 }); await waitSim(0.05);
   await page.keyboard.up('Tab'); await wait(200);
   const afterWheelSel = await G(() => ({ idx: window.__game.combat.state.index, open: window.__game.wheel.open, ts: window.__game.timeScale }));
   record('control: hold Tab opens weapon wheel with slow-mo', wheelOpen.open && wheelOpen.vis && wheelOpen.ts < 0.5, wheelOpen);
@@ -187,7 +200,7 @@ async function collision() {
     for (let i = 0; i < bs.length && out.length < 6; i += Math.max(1, Math.floor(bs.length / 6))) out.push(bs[i]);
     return out.map((b) => ({ minX: b.minX, maxX: b.maxX, minZ: b.minZ, maxZ: b.maxZ }));
   });
-  let walkFails = 0, walkRuns = 0, carFails = 0, carRuns = 0, inside = 0;
+  let walkFails = 0, walkRuns = 0, carFails = 0, carRuns = 0, inside = 0; const carStuck = [];
   const dirs = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4, Math.PI, -Math.PI / 4, -Math.PI / 2, -(3 * Math.PI) / 4];
   for (const b of spots) {
     const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
@@ -217,16 +230,19 @@ async function collision() {
       await G(({ yaw }) => { const g = window.__game, p = g.player; const v = g.vehicleSys.spawn('sedan', p.x, p.z, yaw); g.colliders.resolveCircle(v, 1.6); g.__cc = v; p.enterNearest(); }, { yaw });
       await hold('KeyW', 1800);
       const hit = await pos();
-      await hold('KeyS', 1400);
+      await hold('KeyS', 2000);
       const away = await pos();
       carRuns++;
-      if (Math.hypot(away.x - hit.x, away.z - hit.z) < 1.5) carFails++;
+      if (Math.hypot(away.x - hit.x, away.z - hit.z) < 1.5) {
+        carFails++;
+        carStuck.push(await G(() => { const v = window.__game.__cc; return { x: Math.round(v.x), z: Math.round(v.z), speed: +v.speed.toFixed(2), hp: Math.round(v.hp), wrecked: !!v.wrecked, inCar: window.__game.player.vehicle === v }; }));
+      }
       await G(() => { const g = window.__game; const v = g.__cc; if (g.player.vehicle) { g.player.vehicle.speed = 0; g.player.exitCar(); } if (v) g.vehicleSys.remove(v); });
     }
   }
   // Corner test: walk diagonally into the inside of an L between two boxes (block corners).
   record('collision: on-foot never stuck (backs away after wall hits)', walkFails === 0, { runs: walkRuns, stuck: walkFails, endedInsideGeometry: inside });
-  record('collision: car never stuck (reverses away after wall hits)', carFails === 0, { runs: carRuns, stuck: carFails });
+  record('collision: car never stuck (reverses away after wall hits)', carFails === 0, { runs: carRuns, stuck: carFails, cases: carStuck });
   record('collision: player never inside geometry', inside === 0, { inside });
 }
 
@@ -263,7 +279,7 @@ if (want('collision')) await collision();
 // Feature tests live in tools/audit-features.mjs and are loaded here so one run covers everything.
 if (!only || only.some((n) => n.startsWith('f:'))) {
   const { runFeatures } = await import('./audit-features.mjs');
-  await runFeatures({ page, G, wait, hold, tap, pos, reset, record, want: (n) => !only || only.includes('f:' + n) || only.includes('f:all') });
+  await runFeatures({ page, G, wait, waitSim, hold, tap, pos, reset, record, want: (n) => !only || only.includes('f:' + n) || only.includes('f:all') });
 }
 
 if (want('play')) await play();

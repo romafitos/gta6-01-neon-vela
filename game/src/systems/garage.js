@@ -35,6 +35,8 @@ export function createGarage(game) {
     else if (what === 'armor' && lv.armor < 3 && pay(ARMOR_COST[lv.armor])) { lv.armor++; ok = true; }
     else if (what === 'paint' && pay(PAINT_COST)) {
       lv.paint = (lv.paint + 1) % COLORS.paint.length;
+      // Never "respray" to the colour the car already wears.
+      if (g.paintColor() === v.color) lv.paint = (lv.paint + 1) % COLORS.paint.length;
       game.vehicleSys.repaint(v, g.paintColor()); ok = true;
     } else if (what === 'repair' && v.hp < v.maxHp && pay(REPAIR_COST)) {
       v.hp = v.maxHp; v.onFire = false; ok = true;

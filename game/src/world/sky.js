@@ -38,7 +38,7 @@ void main() {
 
 const PALETTE = {
   day: { zenith: 0x2f6fd0, horizon: 0xb7dcff, glow: 0xfff1c9, sun: 0xfff3dd, hemi: 0xbfdcff, ground: 0x8a7b62, fog: 0xbcd6ef },
-  gold: { zenith: 0x3b3f9a, horizon: 0xff9150, glow: 0xffb35c, sun: 0xffa45c, hemi: 0xffb7a0, ground: 0x6a4a5a, fog: 0xe0906a },
+  gold: { zenith: 0x29307e, horizon: 0xff7a38, glow: 0xffa040, sun: 0xff9a48, hemi: 0xd99a8a, ground: 0x4a3446, fog: 0xc97a5a },
   night: { zenith: 0x050716, horizon: 0x2a1840, glow: 0x50306a, sun: 0x8fa6ff, hemi: 0x3a3f7a, ground: 0x1a1426, fog: 0x1d1530 },
 };
 
@@ -92,7 +92,7 @@ export function createSky(game) {
     const elev = Math.sin(ang);
     const dir = uniforms.uSunDir.value.set(-Math.cos(ang), elev, 0.35).normalize();
     const night = clamp((-elev + 0.05) / 0.25, 0, 1);
-    const gold = clamp(1 - Math.abs(elev - 0.08) / 0.32, 0, 1) * (1 - night);
+    const gold = clamp(1 - Math.abs(elev - 0.1) / 0.45, 0, 1) * (1 - night);
     sky.night = night; sky.gold = gold;
     const day = PALETTE.day, g = PALETTE.gold, n = PALETTE.night;
     const pick = (k) => mixColor(mixColor(day[k], g[k], gold), n[k], night);
@@ -102,12 +102,12 @@ export function createSky(game) {
     uniforms.uStars.value = night;
     hemi.color.copy(pick('hemi'));
     hemi.groundColor.copy(pick('ground'));
-    hemi.intensity = lerp(1.1, 0.55, night);
+    hemi.intensity = lerp(lerp(1.1, 0.7, gold), 0.55, night);
     sun.color.copy(night > 0.5 ? new THREE.Color(PALETTE.night.sun) : pick('sun'));
-    sun.intensity = lerp(lerp(2.6, 3.4, gold), 0.35, night);
+    sun.intensity = lerp(lerp(2.6, 3.6, gold), 0.35, night);
     scene.fog.color.copy(pick('fog'));
-    scene.fog.near = lerp(140, 70, night);
-    scene.fog.far = lerp(560, 330, night);
+    scene.fog.near = lerp(lerp(140, 170, gold), 70, night);
+    scene.fog.far = lerp(lerp(560, 620, gold), 330, night);
     // Light direction: never flatter than ~16 degrees so shadows stay crisp and readable.
     const lightDir = night > 0.5 ? new THREE.Vector3(0.4, 0.8, 0.3).normalize()
       : new THREE.Vector3(dir.x, Math.max(dir.y, 0.28), dir.z).normalize();
@@ -115,7 +115,7 @@ export function createSky(game) {
     sun.target.position.set(fx, 0, fz);
     sun.position.set(fx + lightDir.x * 160, lightDir.y * 160, fz + lightDir.z * 160);
     dome.position.set(fx, 0, fz);
-    renderer.toneMappingExposure = lerp(lerp(1.0, 1.08, gold), 0.95, night);
+    renderer.toneMappingExposure = lerp(lerp(1.0, 0.92, gold), 0.95, night);
 
     if (Math.abs(hour - envHour) > 0.35) {
       envHour = hour;

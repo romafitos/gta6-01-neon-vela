@@ -34,7 +34,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #07070d; col
 #ticker { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; max-width: 620px; padding: 6px 14px; font-size: 14px; color: #bfe3ff; font-family: "Courier New", monospace; }
 #ticker::before { content: "VPD DISPATCH \2014  "; color: #ff4d6d; font-weight: 700; }
 #radio { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: 800; color: #ff7ac0; text-shadow: 0 0 12px #ff2d95, 0 2px 2px #000; letter-spacing: 2px; }
-#notice { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); font-size: 22px; font-weight: 700; text-shadow: 0 2px 4px #000; text-align: center; white-space: nowrap; }
+#notice { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); font-size: 22px; font-weight: 700; text-shadow: 0 2px 4px #000; text-align: center; white-space: pre-line; max-width: 80vw; }
 #crewBar { position: absolute; right: 18px; bottom: 16px; padding: 8px 12px; font-size: 13px; min-width: 210px; }
 #crewBar .ab { display: flex; justify-content: space-between; gap: 10px; }
 #crewBar .cd { color: #8a8fa0; }

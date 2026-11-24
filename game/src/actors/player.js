@@ -144,7 +144,7 @@ export function createPlayer(game, x, z) {
     if (!p.alive) return;
     // Mouse look (both modes).
     const sens = 0.0026;
-    if (input.enabled) {
+    if (input.enabled && !game.wheelOpen) {
       p.camYaw -= input.mouseDX * sens;
       p.camPitch = clamp(p.camPitch + input.mouseDY * sens, -0.35, 0.8);
     }

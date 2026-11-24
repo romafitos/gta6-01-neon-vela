@@ -27,7 +27,7 @@ export function createWeaponWheel(game, el) {
   const ww = { open: false, hover: 0, vx: 0, vy: 0, heldT: 0, moved: false, opens: 0 };
 
   function open() {
-    ww.open = true; ww.opens++; ww.heldT = 0; ww.vx = 0; ww.vy = 0; ww.moved = false;
+    ww.open = true; ww.opens++; ww.heldT = 0; ww.frames = 0; ww.vx = 0; ww.vy = 0; ww.moved = false;
     ww.hover = game.combat.state.index;
     game.wheelOpen = true;
     game.timeScale = 0.25;
@@ -42,7 +42,7 @@ export function createWeaponWheel(game, el) {
     game.timeScale = 1;
     el.classList.add('hidden');
     if (!apply) return;
-    if (!ww.moved && ww.heldT < 0.22) game.combat.cycle(1);
+    if (!ww.moved && (ww.heldT < 0.22 || ww.frames <= 2)) game.combat.cycle(1);
     else game.combat.select(ww.hover);
   }
 
@@ -62,7 +62,7 @@ export function createWeaponWheel(game, el) {
       if (canUse && input.wasPressed(...WHEEL_KEYS)) open();
       return;
     }
-    ww.heldT += realDt;
+    ww.heldT += realDt; ww.frames++;
     ww.vx += input.mouseDX; ww.vy += input.mouseDY;
     const len = Math.hypot(ww.vx, ww.vy);
     if (len > 24) {

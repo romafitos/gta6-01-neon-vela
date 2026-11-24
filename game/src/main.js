@@ -53,6 +53,9 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.3, 1400);
 Object.assign(game, { renderer, scene, camera });
 game.input = createInput(canvas);
+// Headless Chromium's pointer lock reports recentering warps instead of real mouse deltas,
+// so the test mode keeps the cursor free and the game reads cursor movement instead.
+if (AUDIT) game.input.requestLock = () => {};
 game.colliders = createColliders();
 game.hour = START_HOUR;
 
